@@ -1,0 +1,31 @@
+body {
+    background-color:darkgray;
+    font-family: monospace;
+    font-size: 2rem;
+}
+
+.container{
+    margin: 100px auto 50px auto;
+    width: 50%;
+    border: 5px solid black;
+    padding: 15px 30px 15px 30px;
+    background-color: darkgreen;
+    color: white;
+}
+.container h3 {
+    font-size: 2rem;
+    text-align: center;
+    padding-bottom: 30px;
+}
+.center {
+    text-align: center;
+}
+.container input {
+    display: block;
+    margin-right: auto;
+    margin-left: auto;
+    min-width: 25%;
+    min-height: 25px;
+    background-color: darkgray;
+    border: 3px solid black
+}
