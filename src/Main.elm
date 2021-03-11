@@ -9,6 +9,8 @@ import List exposing (..)
 import Debug exposing (toString)
 import List.Extra
 import List
+import Html
+import Array
 
 -- MAIN
 
@@ -28,7 +30,8 @@ type alias Model =
     listSplitIndex : String,
     removeItemAtIndex : String,
     rleInput: String,
-    grayInput: String}
+    grayInput: String,
+    sieveInput: String}
 
 
 init : Model
@@ -37,7 +40,8 @@ init =
     listSplitIndex = "0",
     removeItemAtIndex = "0",
     rleInput="",
-    grayInput=""}
+    grayInput="",
+    sieveInput="0"}
 
 -- UPDATE
 
@@ -47,6 +51,7 @@ type Msg
     | SetRemoveItemAtIndex String
     | SetRleInput String
     | SetGrayInput String
+    | SetSieveInput String
 
 update : Msg -> Model -> Model
 update msg model =
@@ -61,6 +66,8 @@ update msg model =
             {model | rleInput = newInput}
         SetGrayInput newInput ->
             {model | grayInput = newInput}
+        SetSieveInput newInput ->
+            {model | sieveInput = newInput}
         
 
 -- VIEW
@@ -120,7 +127,17 @@ view model =
                 input [ type_ "text", class "center", onInput SetGrayInput] [],                                                             
                 p [class "center"] [text (String.concat ["Output - ", 
                 toString (calculateGray (String.toInt model.grayInput |> Maybe.withDefault 0))])]
-            ]
+            ],
+            div
+            [ class "container"]
+            [
+                h3 [class "palindrome-text"] [text "Sieve of Eratosthenes"],
+                p [class "center"] [text (String.concat ["Input - ", 
+                model.sieveInput])],
+                input [ type_ "number", class "center", onInput SetSieveInput] [],                                                             
+                p [class "center"] [text (String.concat ["Output - ", 
+                toString (sieveOfEratosthenes (String.toInt model.sieveInput |> Maybe.withDefault 2))])]
+            ]            
         ]
     
 -- Assignment 1
@@ -200,3 +217,69 @@ calculateGray n =
             (List.map (\x -> "0" ++ x) recursionGray) ++ 
             -- Secondly adding them reversed with a 1 in front
             (List.map (\x -> "1" ++ x) (List.reverse recursionGray))
+
+-- Assignment 6
+-- sieve of Eratosthenes
+
+-- The main method being called to display the output
+-- Step 1: Creates an array starting with 2 Falses and n-1 Trues 
+-- (Counting 0 and 1 as false to get the right index)
+-- Step 2: Converts most True values to false through the recursive functions bellow
+-- Step 3: Maps the boolean array to its index when true and to 0 when false
+-- Step 4: Filters all 0's from the array
+-- Example outputs provided in the code for clearer explanation
+sieveOfEratosthenes: Int -> List Int
+sieveOfEratosthenes n =
+    -- Step 4: [2,3,5]
+    List.filter
+        (\x -> 
+            not (x == 0)
+        )
+        -- Step 3: [0, 0, 2, 3, 0, 5]
+        (List.indexedMap
+            (\index x -> 
+                if (x) then
+                    index
+                else
+                    0
+            )
+            -- Step 2: [False, False, True, True, False, True]
+            (sieveRec 
+                -- Step 1: [False, False, True, True, True, True] on n=5
+                (False :: (False :: (List.repeat (n-1) True)))
+                2
+            )
+        )
+
+-- Method used as the outer loop looking for values to run the makeFalse check at
+sieveRec: List Bool -> Int -> List Bool
+sieveRec sieveArr n =
+    -- Recursion is going in an ascending order here to make further logic easier
+    -- An optimisation to be had here in terms of performance would be to reduce the list.length variable
+    -- A good potential idea is to take the floor of the square root of it
+    if (n >= List.length sieveArr) then
+        sieveArr
+    else
+        let
+            -- Note - n+1
+            recursionSieve = sieveRec sieveArr (n+1)
+        in
+            -- If true, make every next item incrementing with n false
+            if (Array.get n (Array.fromList recursionSieve) |> Maybe.withDefault True) then
+                (makeFalseRec recursionSieve (2*n) n)
+            else
+                recursionSieve
+
+-- Method used as the inner loop to make values false
+makeFalseRec: List Bool -> Int -> Int -> List Bool
+makeFalseRec sieveArr index addNum = 
+    -- Again the recursion is ascending
+    if (index >= List.length sieveArr) then
+        sieveArr
+    else
+        let
+            -- Incementing with a separate addNum value equaling n to make sure we don't influence it
+            recArray = makeFalseRec sieveArr (index + addNum) addNum
+        in
+            -- Set the value at the index as false
+            Array.toList (Array.set index False (Array.fromList recArray))
