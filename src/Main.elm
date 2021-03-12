@@ -11,6 +11,9 @@ import List.Extra
 import List
 import Html
 import Array
+import Regex
+import String
+import Regex
 
 -- MAIN
 
@@ -31,7 +34,8 @@ type alias Model =
     removeItemAtIndex : String,
     rleInput: String,
     grayInput: String,
-    sieveInput: String}
+    sieveInput: String,
+    tseytinInput: String}
 
 
 init : Model
@@ -41,7 +45,8 @@ init =
     removeItemAtIndex = "0",
     rleInput="",
     grayInput="",
-    sieveInput="0"}
+    sieveInput="0",
+    tseytinInput="(((pVq)^r)->(`s))"}
 
 -- UPDATE
 
@@ -52,6 +57,7 @@ type Msg
     | SetRleInput String
     | SetGrayInput String
     | SetSieveInput String
+    | SetTseytinInput String
 
 update : Msg -> Model -> Model
 update msg model =
@@ -68,6 +74,8 @@ update msg model =
             {model | grayInput = newInput}
         SetSieveInput newInput ->
             {model | sieveInput = newInput}
+        SetTseytinInput newInput ->
+            {model | tseytinInput = newInput}
         
 
 -- VIEW
@@ -137,7 +145,17 @@ view model =
                 input [ type_ "number", class "center", onInput SetSieveInput] [],                                                             
                 p [class "center"] [text (String.concat ["Output - ", 
                 toString (sieveOfEratosthenes (String.toInt model.sieveInput |> Maybe.withDefault 2))])]
-            ]            
+            ],
+            div
+            [ class "container"]
+            [
+                h3 [class "palindrome-text"] [text "Tseytin Transformation"],
+                p [class "center"] [text (String.concat ["Input - ", 
+                model.tseytinInput])],
+                input [ type_ "text", class "center", onInput SetTseytinInput] [],                                                             
+                p [class "center"] [text (String.concat ["Output - ", 
+                toString (tseytinTransform model.tseytinInput)])]
+            ]                
         ]
     
 -- Assignment 1
@@ -283,3 +301,72 @@ makeFalseRec sieveArr index addNum =
         in
             -- Set the value at the index as false
             Array.toList (Array.set index False (Array.fromList recArray))
+
+--  Assignment 7
+-- Tseytin Transformation for Propositions
+
+-- The regex used to find the items to convert
+tseytinRegex : Regex.Regex
+tseytinRegex =
+  Maybe.withDefault Regex.never <|
+    Regex.fromString "\\([\\w<->]*[^\\(\\)][\\w<->]*\\)"
+
+-- The main method - recursively creates a list of all symbols and their biimplication
+-- Adds brackets and joins them with ^
+tseytinTransform : String -> String
+tseytinTransform input =
+    (String.join "^"
+        (
+            List.map 
+            (\x -> "(" ++ x ++ ")") 
+            (tseytin [input])
+        )
+    )
+
+-- Dynamically creating variable names based on the array size
+-- Everytime the recursion happens, an item gets pushed to the list
+-- Which means that i can use this to my advantage to create variable names
+getNewVarName: List String -> String
+getNewVarName inputList  =
+    "x" ++ toString (List.length inputList)
+   
+-- Creating the biimplication part of the statement
+-- Statement is a lot longer than the JS equivalent, but does the same
+getSecondBiimplication: List String -> String
+getSecondBiimplication inputList =
+    (getNewVarName inputList) ++ "<->" ++ 
+    (List.head 
+        (List.map .match 
+            (Regex.find tseytinRegex 
+                (List.head (inputList) |> Maybe.withDefault "")
+            )
+        )
+    |> Maybe.withDefault "")
+
+-- Main recursion. Goes out of the loop whenever the main string is of 5 letters or less
+-- Example : (x4) is of 4 letters
+tseytin: List String -> List String
+tseytin inputList =
+    if (String.length (List.head inputList |> Maybe.withDefault "") <= 5) then
+        inputList
+    else
+        tseytin(tseytinHelper inputList)
+
+-- Helper function used to replace the proposition with the variable in the head and add the proposition's
+-- Biimplication to the tail
+tseytinHelper: List String -> List String
+tseytinHelper inputList = 
+    (Regex.replaceAtMost 
+            1 
+            tseytinRegex 
+            (\_ -> (getNewVarName inputList))
+            (List.head 
+                inputList
+                |> Maybe.withDefault "" 
+            )   
+        )
+        :: 
+    (List.tail 
+        (inputList ++ [(getSecondBiimplication inputList)])
+        |> Maybe.withDefault []
+    )
